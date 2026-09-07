@@ -86,6 +86,8 @@ export default {
         const prize = interaction.options.getString("prize");
         const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
 
+        // Allow giveaway durations below the previous 5-minute minimum.
+        botConfig.giveaways.minimumDuration = 1000;
         const durationMs = parseDuration(durationString);
         validateWinnerCount(winnerCount);
         const prizeName = validatePrize(prize);
