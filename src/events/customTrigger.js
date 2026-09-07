@@ -13,11 +13,11 @@ export default {
       const content = String(message.content || '').trim().toLocaleLowerCase();
       const trigger = triggers.find(item => item.action === SEND_MESSAGE_ACTION && String(item.trigger || '').trim().toLocaleLowerCase() === content);
       if (trigger && String(trigger.roleId || '').startsWith(SEND_MESSAGE_PREFIX)) {
-        const [, channelId, encodedMessage] = String(trigger.roleId).split(':');
-        const channel = message.guild.channels.cache.get(channelId) || await message.guild.channels.fetch(channelId).catch(() => null);
-        if (channel?.isTextBased() && channel.permissionsFor(message.guild.members.me)?.has(PermissionFlagsBits.SendMessages)) {
-          const text = Buffer.from(encodedMessage || '', 'base64').toString('utf8');
-          if (text) await channel.send({ content: text });
+        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) return;
+        const encoded = String(trigger.roleId).slice(SEND_MESSAGE_PREFIX.length);
+        const text = Buffer.from(encoded, 'base64').toString('utf8');
+        if (text && message.channel?.isTextBased() && message.channel.permissionsFor(message.guild.members.me)?.has(PermissionFlagsBits.SendMessages)) {
+          await message.channel.send({ content: text });
         }
         return;
       }
