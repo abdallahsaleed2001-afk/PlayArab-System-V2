@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -118,6 +118,13 @@ export default {
 
         const embed = createGiveawayEmbed(initialGiveawayData, "active");
         const row = createGiveawayButtons(false);
+        row.addComponents(
+            new ButtonBuilder()
+                .setCustomId('giveaway_participants')
+                .setLabel('👥 Participants')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(false)
+        );
 
         const giveawayMessage = await targetChannel.send({
             content: "🎉 **NEW GIVEAWAY** 🎉",
