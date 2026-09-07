@@ -4,6 +4,7 @@ import {
   giveawayRerollHandler,
   giveawayViewHandler,
 } from '../../../handlers/giveawayButtons.js';
+import { giveawayParticipantsHandler } from '../../../handlers/giveawayParticipants.js';
 
 function fromCustomId(handler) {
   return {
@@ -17,4 +18,5 @@ export default [
   fromCustomId(giveawayEndHandler),
   fromCustomId(giveawayRerollHandler),
   fromCustomId(giveawayViewHandler),
+  fromCustomId(giveawayParticipantsHandler),
 ];
