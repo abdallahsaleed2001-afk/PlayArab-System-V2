@@ -127,7 +127,7 @@ class TitanBot extends Client {
     startServer(configuredPort, 0);
   }
 
-  setupCronJobs() { cron.schedule('* * * * *', runSafeTask('giveaway_check', () => checkGiveaways(this))); }
+  setupCronJobs() { cron.schedule('*/5 * * * * *', runSafeTask('giveaway_check', () => checkGiveaways(this))); }
 
   async loadHandlers() {
     startupLog('Loading handlers...');
