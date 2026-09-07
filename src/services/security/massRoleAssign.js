@@ -15,9 +15,7 @@ const DANGEROUS_PERMISSIONS = new Set([
 const lockdowns = new Map();
 
 function hasDangerousPermission(role) {
-  return DANGEROUS_PERMISSIONS.has(PermissionFlagsBits.Administrator)
-    ? role.permissions.has(PermissionFlagsBits.Administrator)
-    : role.permissions.any([...DANGEROUS_PERMISSIONS]);
+  return role.permissions.any([...DANGEROUS_PERMISSIONS]);
 }
 
 async function stripDangerousRoles(member, reason) {
