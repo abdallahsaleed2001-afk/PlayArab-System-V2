@@ -6,6 +6,7 @@ const lockdowns = new Map();
 const EVENT_MAP = {
   channelDelete: AuditLogEvent.ChannelDelete,
   channelCreate: AuditLogEvent.ChannelCreate,
+  channelUpdate: AuditLogEvent.ChannelUpdate,
   roleDelete: AuditLogEvent.RoleDelete,
   roleCreate: AuditLogEvent.RoleCreate,
   roleUpdate: AuditLogEvent.RoleUpdate,
