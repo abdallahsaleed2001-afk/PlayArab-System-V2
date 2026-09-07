@@ -1,7 +1,7 @@
 import { successEmbed } from '../../../utils/embeds.js';
 
 import ConfigService from '../../../services/config/configService.js';
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../../utils/logger.js';
 import { ErrorTypes, replyUserError } from '../../../utils/errorHandler.js';
 
@@ -95,6 +95,14 @@ export default {
         const [key, guildId] = interaction.customId.split(':').slice(1);
 
         try {
+            if (!interaction.guild || interaction.guildId !== guildId) {
+                return interaction.reply({ content: '❌ Invalid configuration session.', flags: MessageFlags.Ephemeral });
+            }
+
+            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+                return interaction.reply({ content: '❌ You need the Manage Server permission.', flags: MessageFlags.Ephemeral });
+            }
+
             const value = resolveModalValue(key, interaction);
             await ConfigService.updateSetting(interaction.client, guildId, key, value, interaction.user.id);
 
