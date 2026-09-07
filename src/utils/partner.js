@@ -16,6 +16,14 @@ export async function getPartnerData(client, guildId) {
   return data;
 }
 export async function savePartnerData(client, guildId, data) { return save(client, guildId, data); }
+export async function deletePartner(client, guildId, partnerId) {
+  const data = await getPartnerData(client, guildId);
+  const index = data.partners.findIndex(p => String(p.id) === String(partnerId) && p.status === 'active');
+  if (index === -1) return false;
+  data.partners.splice(index, 1);
+  await save(client, guildId, data);
+  return true;
+}
 
 export async function setupPartnerPanel(interaction, announcementChannel) {
   const guild = interaction.guild;
@@ -58,6 +66,7 @@ export async function partnerDashboard(interaction) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('partner_pending').setLabel('الطلبات').setEmoji('🟡').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId('partner_active').setLabel('الشركاء').setEmoji('🤝').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('partner_delete').setLabel('حذف شريك').setEmoji('🗑️').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('partner_stats').setLabel('الإحصائيات').setEmoji('📊').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('partner_settings').setLabel('الإعدادات').setEmoji('⚙️').setStyle(ButtonStyle.Secondary),
   );
