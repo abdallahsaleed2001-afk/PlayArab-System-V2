@@ -1,4 +1,4 @@
-import { MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError, replyUserError } from '../utils/errorHandler.js';
@@ -65,6 +65,13 @@ export const giveawayJoinHandler = {
 
                 const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
                 const updatedRow = createGiveawayButtons(false);
+                updatedRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('giveaway_participants')
+                        .setLabel('👥 Participants')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(false)
+                );
 
                 await interaction.message.edit({
                     embeds: [updatedEmbed],
