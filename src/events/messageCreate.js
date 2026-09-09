@@ -208,7 +208,7 @@ async function handleLeveling(message, client) {
     const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
     const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
     if (!canProcess) return;
-    const levelingConfig = await getLevelingConfig(client);
+    const levelingConfig = await getLevelingConfig(client, message.guild.id);
     if (!levelingConfig?.enabled || levelingConfig.ignoredChannels?.includes(message.channel.id)) return;
     if (levelingConfig.ignoredRoles?.length > 0) { const member = await message.guild.members.fetch(message.author.id).catch(() => null); if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) return; }
     if (levelingConfig.blacklistedUsers?.includes(message.author.id) || !message.content?.trim()) return;
