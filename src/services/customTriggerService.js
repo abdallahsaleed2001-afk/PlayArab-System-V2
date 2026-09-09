@@ -33,7 +33,7 @@ export async function addCustomTrigger(client, guildId, trigger, action, roleId 
   if (!normalizedTrigger) throw new Error('Trigger cannot be empty.');
   if (normalizedTrigger.length > MAX_TRIGGER_LENGTH) throw new Error(`Trigger cannot exceed ${MAX_TRIGGER_LENGTH} characters.`);
   if (!Object.values(TRIGGER_ACTIONS).includes(action)) throw new Error('Invalid trigger action.');
-  if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE].includes(action) && !roleId) throw new Error('A role is required for this action.');
+  if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE, TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(action) && !roleId) throw new Error('A role is required for this action.');
 
   const triggers = await getCustomTriggers(client, guildId);
   const existing = triggers.findIndex(item => normalizeTrigger(item.trigger) === normalizedTrigger);
@@ -97,10 +97,8 @@ export async function handleCustomTrigger(message, client) {
     if (trigger.action === TRIGGER_ACTIONS.CHANGE_NICKNAME && !message.member.permissions.has(PermissionFlagsBits.ManageNicknames)) return false;
     if (trigger.action === TRIGGER_ACTIONS.CLEAR_MESSAGES && !message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return false;
     if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE, TRIGGER_ACTIONS.DYNAMIC_ROLE, TRIGGER_ACTIONS.REMOVE_DYNAMIC_ROLE].includes(trigger.action) && !message.member.roles.cache.has(STAFF_ROLE_ID)) return false;
-    if ([TRIGGER_ACTIONS.WARN, TRIGGER_ACTIONS.MUTE, TRIGGER_ACTIONS.UNMUTE, TRIGGER_ACTIONS.TIMEOUT, TRIGGER_ACTIONS.UNTIMEOUT, TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(trigger.action)) {
-      const requiredRole = trigger.action === TRIGGER_ACTIONS.JAIL || trigger.action === TRIGGER_ACTIONS.UNJAIL ? JAIL_STAFF_ROLE_ID : STAFF_ROLE_ID;
-      if (!message.member.roles.cache.has(requiredRole)) return false;
-    }
+    if ([TRIGGER_ACTIONS.WARN, TRIGGER_ACTIONS.MUTE, TRIGGER_ACTIONS.UNMUTE, TRIGGER_ACTIONS.TIMEOUT, TRIGGER_ACTIONS.UNTIMEOUT].includes(trigger.action) && !message.member.roles.cache.has(STAFF_ROLE_ID)) return false;
+    if ([TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(trigger.action) && !message.member.roles.cache.has(trigger.roleId)) return false;
 
     if (trigger.action === TRIGGER_ACTIONS.ADD_MEMBER) {
       if (!await addMemberToCurrentChannel(message, trigger)) return false;
