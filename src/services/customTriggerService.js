@@ -33,11 +33,11 @@ export async function addCustomTrigger(client, guildId, trigger, action, roleId 
   if (!normalizedTrigger) throw new Error('Trigger cannot be empty.');
   if (normalizedTrigger.length > MAX_TRIGGER_LENGTH) throw new Error(`Trigger cannot exceed ${MAX_TRIGGER_LENGTH} characters.`);
   if (!Object.values(TRIGGER_ACTIONS).includes(action)) throw new Error('Invalid trigger action.');
-  if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE, TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(action) && !roleId) throw new Error('A role is required for this action.');
+  if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE].includes(action) && !roleId) throw new Error('A role is required for this action.');
 
   const triggers = await getCustomTriggers(client, guildId);
   const existing = triggers.findIndex(item => normalizeTrigger(item.trigger) === normalizedTrigger);
-  const entry = { trigger: normalizedTrigger, action, roleId: roleId || null };
+  const entry = { trigger: normalizedTrigger, action, roleId: [TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(action) ? JAIL_STAFF_ROLE_ID : (roleId || null) };
   if (existing >= 0) triggers[existing] = entry;
   else {
     if (triggers.length >= MAX_TRIGGERS) throw new Error(`A server can have up to ${MAX_TRIGGERS} custom triggers.`);
@@ -98,7 +98,7 @@ export async function handleCustomTrigger(message, client) {
     if (trigger.action === TRIGGER_ACTIONS.CLEAR_MESSAGES && !message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return false;
     if ([TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE, TRIGGER_ACTIONS.DYNAMIC_ROLE, TRIGGER_ACTIONS.REMOVE_DYNAMIC_ROLE].includes(trigger.action) && !message.member.roles.cache.has(STAFF_ROLE_ID)) return false;
     if ([TRIGGER_ACTIONS.WARN, TRIGGER_ACTIONS.MUTE, TRIGGER_ACTIONS.UNMUTE, TRIGGER_ACTIONS.TIMEOUT, TRIGGER_ACTIONS.UNTIMEOUT].includes(trigger.action) && !message.member.roles.cache.has(STAFF_ROLE_ID)) return false;
-    if ([TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(trigger.action) && !message.member.roles.cache.has(trigger.roleId)) return false;
+    if ([TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(trigger.action) && !message.member.roles.cache.has(JAIL_STAFF_ROLE_ID)) return false;
 
     if (trigger.action === TRIGGER_ACTIONS.ADD_MEMBER) {
       if (!await addMemberToCurrentChannel(message, trigger)) return false;
@@ -237,14 +237,7 @@ async function resolveTargetMember(message) {
   const rawTargetId = rawContent.match(/(?:^|\s)(\d{17,20})(?:\s|$)/)?.[1];
   const targetId = mentionedId || mentionTargetId || rawTargetId || reference?.author?.id;
   if (!targetId || targetId === message.author.id || targetId === message.client.user.id) return null;
-  return message.guild.members.fetch(targetId).catch(() => null);
-}
-
-function getTriggerReason(message, trigger) {
-  const prefix = normalizeTrigger(trigger.trigger);
-  let rest = String(message.content).trim().slice(prefix.length).trim();
-  rest = rest.replace(/^<@!?\d{17,20}>\s*/, '').replace(/^\d{17,20}\s*/, '').trim();
-  return rest || `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`;
+  return message.guild.members.cache.get(targetId) || await message.guild.members.fetch(targetId).catch(() => null);
 }
 
 async function executeModerationTrigger(message, action, trigger) {
@@ -326,6 +319,10 @@ async function executeModerationTrigger(message, action, trigger) {
     return true;
   }
   return false;
+}
+
+function getTriggerReason(message, trigger) {
+  return `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`;
 }
 
 function normalizeTrigger(value) {
