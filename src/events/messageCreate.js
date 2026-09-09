@@ -14,7 +14,6 @@ import { createEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
 import { processAutoMod } from '../services/security/securityService.js';
 import { getStaffData, incrementStaffActivity, recordTicketLog } from '../services/staffService.js';
-import { handleCustomTrigger } from '../services/customTriggerService.js';
 import { handleGameMessage } from '../services/games/gameService.js';
 import { getCountingGameConfig, saveCountingGameConfig, isValidCountingMessage, recordCorrectCount } from '../services/countingGameService.js';
 import { getColorByNumber, isColorSelection, parseColorNumber } from '../services/colorService.js';
@@ -37,8 +36,6 @@ export default {
       const gameHandled = await handleGameMessage(message, client);
       if (gameHandled) return;
       await trackStaffMessage(message);
-      const customTriggerHandled = await handleCustomTrigger(message, client);
-      if (customTriggerHandled) return;
       const autoReplied = await handleAutoReply(message, client);
       if (autoReplied) return;
       await handleAutoReaction(message, client);
@@ -211,7 +208,7 @@ async function handleLeveling(message, client) {
     const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
     const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
     if (!canProcess) return;
-    const levelingConfig = await getLevelingConfig(client, message.guild.id);
+    const levelingConfig = await getLevelingConfig(client);
     if (!levelingConfig?.enabled || levelingConfig.ignoredChannels?.includes(message.channel.id)) return;
     if (levelingConfig.ignoredRoles?.length > 0) { const member = await message.guild.members.fetch(message.author.id).catch(() => null); if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) return; }
     if (levelingConfig.blacklistedUsers?.includes(message.author.id) || !message.content?.trim()) return;
