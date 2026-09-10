@@ -37,7 +37,8 @@ export async function addCustomTrigger(client, guildId, trigger, action, roleId 
 
   const triggers = await getCustomTriggers(client, guildId);
   const existing = triggers.findIndex(item => normalizeTrigger(item.trigger) === normalizedTrigger);
-  const entry = { trigger: normalizedTrigger, action, roleId: [TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(action) ? JAIL_STAFF_ROLE_ID : (roleId || null) };
+  const normalizedRoleId = normalizeRoleId(roleId);
+  const entry = { trigger: normalizedTrigger, action, roleId: [TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL].includes(action) ? JAIL_STAFF_ROLE_ID : (normalizedRoleId || null) };
   if (existing >= 0) triggers[existing] = entry;
   else {
     if (triggers.length >= MAX_TRIGGERS) throw new Error(`A server can have up to ${MAX_TRIGGERS} custom triggers.`);
@@ -182,9 +183,10 @@ async function clearMessages(message, trigger) {
 }
 
 async function changeFixedRole(message, trigger, remove = false) {
-  const role = message.guild.roles.cache.get(trigger.roleId) || await message.guild.roles.fetch(trigger.roleId).catch(() => null);
+  const roleId = normalizeRoleId(trigger.roleId);
+  const role = message.guild.roles.cache.get(roleId) || await message.guild.roles.fetch(roleId).catch(() => null);
   const botMember = message.guild.members.me;
-  const targetMember = await resolveTargetMember(message);
+  const targetMember = await resolveTargetMember(message, trigger);
   if (!role || !botMember || !targetMember || role.managed || role.position >= botMember.roles.highest.position) return false;
   if (targetMember.id === message.guild.ownerId || targetMember.id === botMember.id || targetMember.roles.highest.position >= botMember.roles.highest.position) return false;
   if (remove) {
@@ -199,7 +201,7 @@ async function changeFixedRole(message, trigger, remove = false) {
 }
 
 async function changeMentionedRole(message, trigger, remove = false) {
-  const targetMember = await resolveTargetMember(message);
+  const targetMember = await resolveTargetMember(message, trigger);
   const roleMention = message.mentions.roles.first();
   const rawContent = String(message.content).trim();
   const triggerText = normalizeTrigger(trigger.trigger);
@@ -222,7 +224,7 @@ async function changeMentionedRole(message, trigger, remove = false) {
 
 async function addMemberToCurrentChannel(message, trigger) {
   if (!message.member.permissions.has(PermissionFlagsBits.ManageChannels)) return false;
-  const member = await resolveTargetMember(message);
+  const member = await resolveTargetMember(message, trigger);
   const botMember = message.guild.members.me;
   if (!member || member.user.bot || !botMember || !message.channel.permissionsFor(botMember).has(PermissionFlagsBits.ManageChannels)) return false;
   await message.channel.permissionOverwrites.edit(member, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }, { reason: `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}` });
@@ -230,19 +232,25 @@ async function addMemberToCurrentChannel(message, trigger) {
   return true;
 }
 
-async function resolveTargetMember(message) {
+async function resolveTargetMember(message, trigger = null) {
   const reference = message.reference?.messageId ? await message.channel.messages.fetch(message.reference.messageId).catch(() => null) : null;
   const mentionedId = message.mentions.users.first()?.id;
   const rawContent = String(message.content).trim();
   const mentionTargetId = rawContent.match(/<@!?(\d{17,20})>/)?.[1];
-  const rawTargetId = rawContent.match(/(?:^|\s)(\d{17,20})(?:\s|$)/)?.[1];
+  const triggerText = trigger ? normalizeTrigger(trigger.trigger) : '';
+  const remainder = triggerText && rawContent.toLowerCase().startsWith(triggerText)
+    ? rawContent.slice(triggerText.length).trim()
+    : rawContent;
+  const rawTargetId = remainder.match(/^(?:<@!?(\d{17,20})>|(\d{17,20}))(?:\s|$)/)?.[1]
+    || remainder.match(/^(?:<@!?(\d{17,20})>|(\d{17,20}))/)?.[1]
+    || rawContent.match(/(?:^|\s)(\d{17,20})(?:\s|$)/)?.[1];
   const targetId = mentionedId || mentionTargetId || rawTargetId || reference?.author?.id;
   if (!targetId || targetId === message.author.id || targetId === message.client.user.id) return null;
   return message.guild.members.cache.get(targetId) || await message.guild.members.fetch(targetId).catch(() => null);
 }
 
 async function executeModerationTrigger(message, action, trigger) {
-  const member = await resolveTargetMember(message);
+  const member = await resolveTargetMember(message, trigger);
   if (!member) return false;
   const botMember = message.guild.members.me;
   if (!botMember || member.id === message.guild.ownerId || member.roles.highest.position >= botMember.roles.highest.position) return false;
@@ -328,4 +336,9 @@ function getTriggerReason(message, trigger) {
 
 function normalizeTrigger(value) {
   return String(value ?? '').trim().toLocaleLowerCase();
+}
+
+function normalizeRoleId(value) {
+  const raw = String(value ?? '').trim();
+  return raw.match(/^<@&(\d{17,20})>$/)?.[1] || raw.match(/^(\d{17,20})$/)?.[1] || null;
 }
