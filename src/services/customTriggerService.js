@@ -79,7 +79,8 @@ export async function handleCustomTrigger(message, client) {
     TRIGGER_ACTIONS.ADD_MEMBER, TRIGGER_ACTIONS.CLEAR_MESSAGES, TRIGGER_ACTIONS.BAN, TRIGGER_ACTIONS.KICK,
     TRIGGER_ACTIONS.WARN, TRIGGER_ACTIONS.MUTE, TRIGGER_ACTIONS.UNMUTE, TRIGGER_ACTIONS.TIMEOUT,
     TRIGGER_ACTIONS.UNTIMEOUT, TRIGGER_ACTIONS.JAIL, TRIGGER_ACTIONS.UNJAIL, TRIGGER_ACTIONS.DYNAMIC_ROLE,
-    TRIGGER_ACTIONS.REMOVE_DYNAMIC_ROLE, TRIGGER_ACTIONS.CHANGE_NICKNAME, TRIGGER_ACTIONS.CHANGE_CHANNEL_NAME
+    TRIGGER_ACTIONS.REMOVE_DYNAMIC_ROLE, TRIGGER_ACTIONS.CHANGE_NICKNAME, TRIGGER_ACTIONS.CHANGE_CHANNEL_NAME,
+    TRIGGER_ACTIONS.ADD_ROLE, TRIGGER_ACTIONS.REMOVE_ROLE
   ];
   const trigger = triggers.find(item => prefixActions.includes(item.action)
     ? (content === normalizeTrigger(item.trigger) || content.startsWith(`${normalizeTrigger(item.trigger)} `))
@@ -111,7 +112,7 @@ export async function handleCustomTrigger(message, client) {
     } else if (channelActions.includes(trigger.action)) {
       const targetRole = message.guild.roles.cache.get(TARGET_ROLE_ID) || await message.guild.roles.fetch(TARGET_ROLE_ID).catch(() => null);
       if (!targetRole) return false;
-      const reason = `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`;
+      const reason = `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}`;
       if (trigger.action === TRIGGER_ACTIONS.LOCK) await message.channel.permissionOverwrites.edit(targetRole, { SendMessages: false }, { reason });
       else if (trigger.action === TRIGGER_ACTIONS.UNLOCK) await message.channel.permissionOverwrites.edit(targetRole, { SendMessages: true }, { reason });
       else if (trigger.action === TRIGGER_ACTIONS.HIDE) await message.channel.permissionOverwrites.edit(targetRole, { ViewChannel: false }, { reason });
@@ -147,8 +148,8 @@ async function changeNickname(message, trigger) {
   if (!targetMember || !nickname || nickname.length > 32) return false;
   const botMember = message.guild.members.me;
   if (!botMember || targetMember.id === message.guild.ownerId || targetMember.id === botMember.id || targetMember.roles.highest.position >= botMember.roles.highest.position || !targetMember.manageable) return false;
-  if (!targetMatch && !message.mentions.users.first()) return false;
-  await targetMember.setNickname(nickname, `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`);
+  if (!targetMatch && !message.mentions.users.first() && !message.reference?.messageId) return false;
+  await targetMember.setNickname(nickname, `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}`);
   return true;
 }
 
@@ -161,7 +162,7 @@ async function changeChannelName(message, trigger) {
   const name = remainder.replace(/^<#\d{17,20}>\s*/, '').replace(/^\d{17,20}\s*/, '').trim();
   const channel = channelId ? message.guild.channels.cache.get(channelId) || await message.guild.channels.fetch(channelId).catch(() => null) : message.channel;
   if (!channel || !name || name.length > 100 || !channel.manageable) return false;
-  await channel.setName(name, `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`);
+  await channel.setName(name, `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}`);
   return true;
 }
 
@@ -188,10 +189,10 @@ async function changeFixedRole(message, trigger, remove = false) {
   if (targetMember.id === message.guild.ownerId || targetMember.id === botMember.id || targetMember.roles.highest.position >= botMember.roles.highest.position) return false;
   if (remove) {
     if (!targetMember.roles.cache.has(role.id)) return false;
-    await targetMember.roles.remove(role, `Custom trigger "${trigger.trigger}"`);
+    await targetMember.roles.remove(role, `Custom trigger \"${trigger.trigger}\"`);
   } else {
     if (targetMember.roles.cache.has(role.id)) return false;
-    await targetMember.roles.add(role, `Custom trigger "${trigger.trigger}"`);
+    await targetMember.roles.add(role, `Custom trigger \"${trigger.trigger}\"`);
   }
   await logModerationAction({ client: message.client, guild: message.guild, event: { action: remove ? 'Role Removed' : 'Role Added', target: `${targetMember.user.tag} (${targetMember.id})`, executor: `${message.author.tag} (${message.author.id})`, reason: `Trigger: ${trigger.trigger}`, metadata: { userId: targetMember.id, moderatorId: message.author.id, roleId: role.id } } });
   return true;
@@ -210,10 +211,10 @@ async function changeMentionedRole(message, trigger, remove = false) {
   if (targetMember.id === message.guild.ownerId || targetMember.id === botMember.id || targetMember.roles.highest.position >= botMember.roles.highest.position) return false;
   if (remove) {
     if (!targetMember.roles.cache.has(role.id)) return false;
-    await targetMember.roles.remove(role, `Custom trigger "${trigger.trigger}"`);
+    await targetMember.roles.remove(role, `Custom trigger \"${trigger.trigger}\"`);
   } else {
     if (targetMember.roles.cache.has(role.id)) return false;
-    await targetMember.roles.add(role, `Custom trigger "${trigger.trigger}"`);
+    await targetMember.roles.add(role, `Custom trigger \"${trigger.trigger}\"`);
   }
   await logModerationAction({ client: message.client, guild: message.guild, event: { action: remove ? 'Role Removed' : 'Role Added', target: `${targetMember.user.tag} (${targetMember.id})`, executor: `${message.author.tag} (${message.author.id})`, reason: `Trigger: ${trigger.trigger}`, metadata: { userId: targetMember.id, moderatorId: message.author.id, roleId: role.id } } });
   return true;
@@ -224,7 +225,7 @@ async function addMemberToCurrentChannel(message, trigger) {
   const member = await resolveTargetMember(message);
   const botMember = message.guild.members.me;
   if (!member || member.user.bot || !botMember || !message.channel.permissionsFor(botMember).has(PermissionFlagsBits.ManageChannels)) return false;
-  await message.channel.permissionOverwrites.edit(member, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }, { reason: `Custom trigger "${trigger.trigger}" used by ${message.author.tag}` });
+  await message.channel.permissionOverwrites.edit(member, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }, { reason: `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}` });
   await logModerationAction({ client: message.client, guild: message.guild, event: { action: 'Member Added To Channel', target: `${member.user.tag} (${member.id})`, executor: `${message.author.tag} (${message.author.id})`, reason: `Trigger: ${trigger.trigger}`, metadata: { userId: member.id, moderatorId: message.author.id, channelId: message.channel.id } } });
   return true;
 }
@@ -322,7 +323,7 @@ async function executeModerationTrigger(message, action, trigger) {
 }
 
 function getTriggerReason(message, trigger) {
-  return `Custom trigger "${trigger.trigger}" used by ${message.author.tag}`;
+  return `Custom trigger \"${trigger.trigger}\" used by ${message.author.tag}`;
 }
 
 function normalizeTrigger(value) {
