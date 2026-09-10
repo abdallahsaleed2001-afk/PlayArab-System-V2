@@ -289,7 +289,7 @@ async function executeModerationTrigger(message, action, trigger) {
 
   if (action === TRIGGER_ACTIONS.WARN) {
     const { id, totalCount } = await WarningService.addWarning({ guildId: message.guild.id, userId: member.id, moderatorId: message.author.id, reason, timestamp: Date.now() });
-    const caseId = await logModerationAction({ client: message.client, guild: message.guild, event: { action: 'User Warned', target, executor, reason, metadata: { userId: member.id, moderatorId: message.author.id, totalWarns: totalCount, warningNumber: totalCount, warningId: id } });
+    const caseId = await logModerationAction({ client: message.client, guild: message.guild, event: { action: 'User Warned', target, executor, reason, metadata: { userId: member.id, moderatorId: message.author.id, totalWarns: totalCount, warningNumber: totalCount, warningId: id } } });
     await WarningService.attachCaseId(message.guild.id, member.id, id, caseId);
     await sendPunishmentDM({ user: member.user, guild: message.guild, type: 'warn', reason, caseId });
     const escalation = await applyWarningEscalation({ guild: message.guild, member, moderator: message.member, warningCount: totalCount, reason, client });
