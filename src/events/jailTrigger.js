@@ -32,6 +32,8 @@ export default {
       if (!trigger) return false;
       const isPrefixTrigger = [
         TRIGGER_ACTIONS.ADD_MEMBER,
+        TRIGGER_ACTIONS.ADD_ROLE,
+        TRIGGER_ACTIONS.REMOVE_ROLE,
         TRIGGER_ACTIONS.BAN,
         TRIGGER_ACTIONS.KICK,
         TRIGGER_ACTIONS.WARN,
